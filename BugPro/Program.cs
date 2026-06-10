@@ -31,6 +31,7 @@ public enum TicketAction
 public sealed class Bug
 {
     private readonly StateMachine<TicketPhase, TicketAction> _flow;
+    private readonly StateMachine<TicketPhase, TicketAction>.TriggerWithParameters<string> _annotate;
     private readonly List<string> _journal = [];
 
     public Bug(int identifier, string summary)
@@ -38,6 +39,7 @@ public sealed class Bug
         Identifier = identifier;
         Summary = summary;
         _flow = new StateMachine<TicketPhase, TicketAction>(TicketPhase.Incoming);
+        _annotate = _flow.SetTriggerParameters<string>(TicketAction.AppendNote);
         Record($"тикет #{identifier} создан: «{summary}»");
         BuildWorkflow();
     }
@@ -62,7 +64,7 @@ public sealed class Bug
         Apply(TicketAction.AssignOwner);
     }
 
-    public void AppendNote(string note) => _flow.Fire(TicketAction.AppendNote, note);
+    public void AppendNote(string note) => _flow.Fire(_annotate, note);
 
     public string DescribePhase() => Phase switch
     {
@@ -118,16 +120,16 @@ public sealed class Bug
             .OnEntryFrom(TicketAction.Unblock, () => Record("блокировка снята, работа продолжена"));
 
         _flow.Configure(TicketPhase.Classified)
-            .InternalTransition(TicketAction.AppendNote, note => Record($"заметка: {note}"));
+            .InternalTransition(_annotate, (note, _) => Record($"заметка: {note}"));
 
         _flow.Configure(TicketPhase.BeingFixed)
-            .InternalTransition(TicketAction.AppendNote, note => Record($"заметка: {note}"));
+            .InternalTransition(_annotate, (note, _) => Record($"заметка: {note}"));
 
         _flow.Configure(TicketPhase.OnHold)
-            .InternalTransition(TicketAction.AppendNote, note => Record($"заметка: {note}"));
+            .InternalTransition(_annotate, (note, _) => Record($"заметка: {note}"));
 
         _flow.Configure(TicketPhase.AwaitingVerification)
-            .InternalTransition(TicketAction.AppendNote, note => Record($"заметка: {note}"));
+            .InternalTransition(_annotate, (note, _) => Record($"заметка: {note}"));
     }
 
     private bool HasOwner() => !string.IsNullOrWhiteSpace(Owner);
