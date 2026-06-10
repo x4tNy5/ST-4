@@ -1,4 +1,5 @@
-using BugPro; 
+using BugPro;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BugTests;
 
